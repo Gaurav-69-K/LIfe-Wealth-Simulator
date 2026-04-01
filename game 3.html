@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Life & Wealth Simulator V13</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: #ffffff; margin: 0; padding: 0; display: flex; justify-content: center; height: 100vh; overflow: hidden; }
+        .container { max-width: 600px; width: 100%; background-color: #1e1e1e; display: flex; flex-direction: column; position: relative; box-shadow: 0 0 20px rgba(0,0,0,0.8); height: 100%; }
+        
+        #intro-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 20px; text-align: center; overflow-y: auto; }
+        input[type="text"], select, input[type="number"] { padding: 12px; font-size: 1.1em; border-radius: 5px; border: none; width: 80%; margin-bottom: 15px; background-color: #2a2a2a; color: white; text-align: center; box-sizing: border-box;}
+        
+        #game-screen { display: none; flex-direction: column; height: 100%; }
+        
+        .header-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; background-color: #2c2c2c; padding: 10px 15px; font-weight: bold; border-bottom: 2px solid #333; font-size: 0.8em; }
+        .stat-box { background-color: #1a1a1a; padding: 8px; border-radius: 5px; text-align: center; }
+        .cash { color: #4caf50; } .debt { color: #f44336; } .info { color: #ffeb3b; } .score { color: #00bcd4; } .happy { color: #e91e63; }
+        
+        .content-area { flex-grow: 1; padding: 15px; overflow-y: auto; margin-bottom: 70px; }
+        .tab-content { display: none; background-color: #2a2a2a; padding: 15px; border-radius: 8px; margin-bottom: 20px;}
+        .tab-content.active { display: block; }
+        
+        .bottom-nav { display: flex; justify-content: space-around; position: absolute; bottom: 0; width: 100%; background-color: #1a1a1a; border-top: 2px solid #333; overflow-x: auto; white-space: nowrap; padding-bottom: max(env(safe-area-inset-bottom), 0px); scrollbar-width: none;}
+        .bottom-nav::-webkit-scrollbar { display: none; }
+        .nav-btn { flex: 1 0 auto; min-width: 60px; background: none; color: #888; border: none; padding: 10px 5px; cursor: pointer; font-size: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; transition: 0.2s; }
+        .nav-btn.active { color: #6200ea; background-color: #222; }
+        .nav-icon { font-size: 18px; }
+        
+        button.action-btn { background-color: #6200ea; color: white; border: none; padding: 12px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 5px; transition: 0.2s; }
+        button.action-btn:hover { background-color: #7c4dff; }
+        button.action-btn:disabled { background-color: #444; cursor: not-allowed; color: #777; }
+        .danger-btn { background-color: #b71c1c !important; } .danger-btn:hover { background-color: #d32f2f !important; }
+        .market-btn { background-color: #009688; } .market-btn:hover { background-color: #26a69a; }
+        .casino-btn { background-color: #ff9800; color: #000; } .casino-btn:hover { background-color: #e68a00; }
+        .gift-btn { background-color: #e91e63; margin-bottom: 5px;} .gift-btn:hover { background-color: #c2185b; }
+        .fine-print { display: block; font-size: 0.75em; color: #ffab91; margin-top: 4px; font-weight: normal; }
+
+        #log { background-color: #000; color: #00ff00; font-family: monospace; padding: 10px; height: 120px; overflow-y: scroll; border-radius: 5px; margin-top: 15px; font-size: 0.8em; border: 1px solid #333; }
+        .section-title { border-bottom: 1px solid #444; padding-bottom: 5px; margin-bottom: 15px; margin-top: 0; font-size: 1.1em; }
+        .panel { background: #222; padding: 15px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #333; }
+        .progress-text { font-size: 0.9em; color: #aaa; margin-top: 5px; }
+        .amount-input { width: 100%; margin-bottom: 5px; background-color: #111; color: #4caf50; font-weight: bold;}
+
+        /* Market Styles */
+        .ticker-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #333; font-size: 0.9em; }
+        .ticker-name { flex-grow: 1; }
+        .ticker-price { width: 80px; text-align: right; font-family: monospace; }
+        .trend-up { color: #4caf50; }
+        .trend-down { color: #f44336; }
+        .portfolio-item { background: #111; padding: 10px; border-radius: 5px; margin-bottom: 5px; font-size: 0.85em; border-left: 3px solid #6200ea;}
+        .port-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 5px;}
+        .port-full-row { grid-column: span 2; }
+
+        /* Modals */
+        .modal-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: #1a1a1a; padding: 25px; border-radius: 10px; width: 85%; max-height: 90vh; overflow-y: auto; text-align: center; border: 2px solid #6200ea; box-shadow: 0 0 20px rgba(98,0,234,0.3); }
+        .game-over-content { border: 2px solid #f44336; box-shadow: 0 0 30px rgba(244,67,54,0.5); }
+        
+        .news-box { background: #000; color: #fff; padding: 15px; border-left: 4px solid #ffeb3b; text-align: left; margin-top: 15px; font-size: 0.9em; }
+        .statement-row { display: flex; justify-content: space-between; border-bottom: 1px dashed #444; padding: 5px 0; }
+
+        .bj-modal-content { border-color: #ff9800; box-shadow: 0 0 20px rgba(255,152,0,0.3); }
+        .card-display { font-size: 1.8em; margin: 10px 0; letter-spacing: 5px; background: #eee; padding: 15px; border-radius: 5px; min-height: 40px; display: flex; justify-content: center; gap: 10px;}
+        .red-card { color: #d32f2f; background: white; padding: 5px 10px; border-radius: 4px; box-shadow: 1px 1px 3px rgba(0,0,0,0.3); }
+        .black-card { color: #111; background: white; padding: 5px 10px; border-radius: 4px; box-shadow: 1px 1px 3px rgba(0,0,0,0.3); }
+        .hidden-card { color: #fff; background: #1e88e5; padding: 5px 10px; border-radius: 4px; background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255,255,255,.1) 5px, rgba(255,255,255,.1) 10px); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="intro-screen">
+        <h1>Welcome to Life</h1>
+        <p>Set up your character to begin.</p>
+        <input type="text" id="firstName" placeholder="First Name">
+        <input type="text" id="lastName" placeholder="Last Name">
+        <select id="playerGender">
+            <option value="" disabled selected>Select Gender</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Non-Binary">Non-Binary</option>
+        </select>
+        <button class="action-btn" onclick="startGame()" style="width: 80%;">Start Life</button>
+    </div>
+
+    <div id="game-screen">
+        <div class="header-stats">
+            <div class="stat-box">Age: <span class="info" id="ui-age">0 Y</span></div>
+            <div class="stat-box">Bank: <span class="cash" id="ui-bank">₹0</span></div>
+            <div class="stat-box">Debt: <span class="debt" id="ui-debt">₹0</span></div>
+            <div class="stat-box">Credit: <span class="score" id="ui-cscore">N/A</span></div>
+            <div class="stat-box">Happy: <span class="happy" id="ui-happy">100%</span></div>
+            <div class="stat-box">Cash: <span class="cash" id="ui-cash-hand">₹0</span></div>
+        </div>
+
+        <div class="content-area">
+            <div id="life" class="tab-content active">
+                <h3 class="section-title">Timeline</h3>
+                <p id="time-desc">Advance your life to see what happens next.</p>
+                <button class="action-btn" id="age-btn" onclick="advanceTime()" style="padding: 20px; font-size: 1.2em;">Age Up (+1 Year)</button>
+                <div id="log"></div>
+            </div>
+
+            <div id="family" class="tab-content">
+                <h3 class="section-title">Immediate Family</h3>
+                <div class="panel">
+                    <p><strong>Parents:</strong></p>
+                    <p class="info" id="ui-parent1">Unknown</p>
+                    <p class="info" id="ui-parent2">Unknown</p>
+                    <hr style="border: 0.5px solid #444; margin: 10px 0;">
+                    <p><strong>Sibling:</strong></p>
+                    <p class="info" id="ui-sibling">Unknown</p>
+                </div>
+                <div id="partner-section" style="display: none;">
+                    <h3 class="section-title">Relationships</h3>
+                    <div class="panel">
+                        <div id="partner-search-box">
+                            <p>Status: <strong class="info">Single</strong></p>
+                            <p class="progress-text">Looking for a partner?</p>
+                            <select id="attractionPreference" style="width: 100%;">
+                                <option value="Female">Attracted to Women</option>
+                                <option value="Male">Attracted to Men</option>
+                                <option value="Any">Attracted to Anyone</option>
+                            </select>
+                            <button class="action-btn" id="start-search-btn" onclick="startPartnerSearch()">Start Looking</button>
+                            <p class="progress-text" id="search-progress-text" style="display: none;">Searching... Keep advancing months.</p>
+                        </div>
+                        
+                        <div id="partner-active-box" style="display: none;">
+                            <p>Status: <strong class="happy" id="ui-partner-status">Dating</strong></p>
+                            <p>Partner: <strong class="info" id="ui-partner-name">Name</strong></p>
+                            <p style="margin-top:10px; margin-bottom:2px; font-size: 0.8em;">Relationship Bond</p>
+                            <progress id="ui-partner-rel-bar" value="0" max="100" style="width:100%; height: 15px;"></progress>
+                            <p class="progress-text" style="margin-top:2px;">Warning: Neglect for 3 months leads to a breakup.</p>
+                            
+                            <hr style="border: 0.5px solid #444; margin: 15px 0;">
+                            
+                            <button class="action-btn" onclick="interactPartner('time')">Spend Time Together (Uses 4 Hrs)</button>
+                            <div id="gift-buttons" style="margin-top: 10px;"></div>
+                            <button class="action-btn" id="propose-btn" style="background-color: #9c27b0; margin-top: 20px; display: none;" onclick="proposePartner()">💍 Propose (Cost: ₹1,00,000)</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="edu" class="tab-content">
+                <h3 class="section-title">Mainstream Education</h3>
+                <div class="panel" id="edu-status-panel">
+                    <p>Status: <strong class="info" id="edu-status">Not Enrolled</strong></p>
+                    <p class="progress-text" id="edu-progress"></p>
+                </div>
+                <div id="edu-options">
+                    <button class="action-btn" onclick="enroll('BBA', 36, 500000)">Study BBA (3 Years) - ₹5,00,000</button>
+                    <button class="action-btn" onclick="enroll('Engineering', 48, 800000)">Study Engineering (4 Years) - ₹8,00,000</button>
+                    <button class="action-btn" onclick="enroll('Law', 60, 1000000)">Study Law (5 Years) - ₹10,00,000</button>
+                    <button class="action-btn" onclick="enroll('Medicine', 60, 1500000)">Study Medicine (5 Years) - ₹15,00,000</button>
+                </div>
+                
+                <h3 class="section-title" style="margin-top: 30px;">Professional Skills</h3>
+                <p class="progress-text">Skills take 3 months and cost ₹10,000 upfront. Unlocks freelance gigs.</p>
+                <div class="panel" id="skill-status-panel" style="display:none;">
+                    <p>Learning: <strong class="info" id="skill-status">None</strong></p>
+                    <p class="progress-text" id="skill-progress"></p>
+                </div>
+                <div id="skill-options">
+                    <button class="action-btn market-btn" onclick="learnSkill('Video Editing')">Learn Video Editing - ₹10,000</button>
+                    <button class="action-btn market-btn" onclick="learnSkill('Graphic Designing')">Learn Graphic Designing - ₹10,000</button>
+                    <button class="action-btn market-btn" onclick="learnSkill('Photography')">Learn Photography - ₹10,000</button>
+                </div>
+
+                <div id="funding-options" style="display: none;" class="panel">
+                    <h4>Funding Required for Degree</h4>
+                    <button class="action-btn" onclick="payForCollege('parents')">Ask Parents (Rich Families Only)</button>
+                    <button class="action-btn danger-btn" onclick="payForCollege('loan')">Take Student Loan (5% Yearly Interest)</button>
+                </div>
+            </div>
+
+            <div id="job" class="tab-content">
+                <div id="active-job-panel" class="panel" style="display: none; border-color: #4caf50;">
+                    <h3 class="section-title" style="color: #4caf50;">Career Dashboard</h3>
+                    <p>Role: <strong id="ui-active-role">None</strong></p>
+                    <p>Salary: <strong class="cash" id="ui-active-pay">₹0</strong> <span id="ui-pay-type">/ month</span></p>
+                    <p class="progress-text">Months in role: <span id="ui-job-months">0</span></p>
+                    <div id="ft-actions" style="margin-top: 15px; border-top: 1px solid #444; padding-top: 10px;">
+                        <p>Extra Hours This Year: <strong class="info" id="ui-extra-hrs-yr">0</strong></p>
+                        <button class="action-btn" onclick="workExtraHour()">Work Extra Hour (Boosts Yearly Review)</button>
+                    </div>
+                </div>
+                <div id="job-market">
+                    <h3 class="section-title">Gig Economy (Part-Time)</h3>
+                    <p class="progress-text">Hours worked this month: <span id="ui-pt-hours" class="info">0</span> / <span id="ui-pt-max">160</span></p>
+                    <p class="progress-text">Total Freelance Hours Logged: <span class="info" id="ui-fl-hours">0</span></p>
+                    
+                    <button class="action-btn" onclick="workGig('Barista', 150, 4)">Work Barista Shift (4 hrs @ ₹150/hr)</button>
+                    <button class="action-btn" id="freelance-btn" onclick="workGig('Freelance', 300, 6)" disabled>Freelance Gig (6 hrs @ ₹300/hr) - Needs Skill</button>
+
+                    <h3 class="section-title" style="margin-top: 30px;">Corporate Careers</h3>
+                    <button class="action-btn ft-apply-btn" data-req="BBA" onclick="applyForJob('Marketing Manager', 'BBA', 50000)">Apply: Marketing Manager</button>
+                    <button class="action-btn ft-apply-btn" data-req="Engineering" onclick="applyForJob('Software Engineer', 'Engineering', 70000)">Apply: Software Engineer</button>
+                    <button class="action-btn ft-apply-btn" data-req="Law" onclick="applyForJob('Corporate Lawyer', 'Law', 90000)">Apply: Corporate Lawyer</button>
+                    <button class="action-btn ft-apply-btn" data-req="Medicine" onclick="applyForJob('Resident Doctor', 'Medicine', 100000)">Apply: Resident Doctor</button>
+                    
+                    <button class="action-btn" id="ft-freelance-btn" style="display:none; background:#9c27b0;" onclick="applyForJob('Creative Director', 'Skill', 60000)">Apply: Creative Director (Requires 400 Freelance Hrs)</button>
+                </div>
+            </div>
+
+            <div id="market" class="tab-content">
+                <h3 class="section-title">Global Markets</h3>
+                
+                <div class="panel">
+                    <h4>My Portfolio</h4>
+                    <div id="portfolio-display" style="max-height: 250px; overflow-y: auto;">
+                        <p class="progress-text">No active holdings.</p>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h4>Trading Desk</h4>
+                    <select id="trade-asset-select" onchange="updateTradeUI()" style="width: 100%; margin-bottom: 10px;"></select>
+                    <p style="margin: 5px 0;">Price: <strong class="info">₹<span id="tr-price">0.00</span></strong> <span id="tr-trend"></span></p>
+                    <p style="margin: 5px 0; margin-bottom: 10px;">Long: <strong class="cash" id="tr-owned">0</strong> | Short: <strong class="debt" id="tr-short">0</strong></p>
+                    
+                    <input type="number" id="tr-amt" class="amount-input" placeholder="Quantity" min="1">
+                    <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+                        <button class="action-btn market-btn" onclick="executeTrade('buy')">Buy Long</button>
+                        <button class="action-btn" onclick="executeTrade('sell')">Sell Long</button>
+                    </div>
+                    <div style="display: flex; gap: 5px;" id="short-controls">
+                        <button class="action-btn danger-btn" onclick="executeTrade('short')">Go Short</button>
+                        <button class="action-btn" style="background:#555;" onclick="executeTrade('cover')">Cover Short</button>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h4 style="margin-top: 0; margin-bottom: 10px;">Live Market Ticker</h4>
+                    <div id="market-ticker-display" style="max-height: 200px; overflow-y: auto; padding-right: 5px;"></div>
+                </div>
+            </div>
+
+            <div id="bank" class="tab-content">
+                <div class="panel">
+                    <h3 class="section-title">City National Bank</h3>
+                    <p>Checking: <strong class="cash" id="ui-bank-bal">₹0</strong></p>
+                    <input type="number" id="bank-amount" class="amount-input" placeholder="Enter Amount (₹)" min="1">
+                    <div style="display: flex; gap: 10px;">
+                        <button class="action-btn" onclick="bankTransaction('deposit')">Deposit Cash</button>
+                        <button class="action-btn" onclick="bankTransaction('withdraw')">Withdraw Cash</button>
+                    </div>
+                </div>
+                <div class="panel">
+                    <h3 class="section-title">Credit Services</h3>
+                    <p>Status: <strong id="ui-cc-status">Locked</strong></p>
+                    <p>Limit: <strong class="info" id="ui-cc-limit">₹0</strong> | Balance: <strong class="debt" id="ui-cc-debt">₹0</strong></p>
+                    <button class="action-btn" id="apply-cc-btn" onclick="applyForCreditCard()">Apply for Credit Card</button>
+                    <div id="cc-actions" style="display: none; margin-top: 15px;">
+                        <input type="number" id="cc-pay-amount" class="amount-input" placeholder="Payment Amount (₹)" min="1">
+                        <button class="action-btn" onclick="payCreditCard()">Pay Towards Bill (Uses Bank Bal)</button>
+                        <button class="action-btn danger-btn" onclick="cashAdvance()" style="margin-top: 15px;">
+                            Emergency Swipe: ₹5,000 Cash
+                            <span class="fine-print">*Warning: 2% fee + 36% APR.</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="casino" class="tab-content">
+                <h3 class="section-title">The High Roller Casino</h3>
+                <p class="progress-text">All bets use Cash & Bank Balance. Losing drops Happiness!</p>
+                <div class="panel">
+                    <h4>🎰 Slot Machine</h4>
+                    <input type="number" id="slot-bet" class="amount-input" placeholder="Bet Amount (₹)" min="1">
+                    <button class="action-btn casino-btn" onclick="playSlots()">Spin Slots</button>
+                </div>
+                <div class="panel">
+                    <h4>🎲 Roulette</h4>
+                    <input type="number" id="roulette-bet" class="amount-input" placeholder="Bet Amount (₹)" min="1">
+                    <div style="display: flex; gap: 10px;">
+                        <button class="action-btn casino-btn" style="background: #d32f2f; color: white;" onclick="playRoulette('Red')">Bet Red</button>
+                        <button class="action-btn casino-btn" style="background: #111; color: white; border: 1px solid #555;" onclick="playRoulette('Black')">Bet Black</button>
+                    </div>
+                </div>
+                <div class="panel">
+                    <h4>🃏 VIP Blackjack Room</h4>
+                    <input type="number" id="bj-bet-input" class="amount-input" placeholder="Bet Amount (₹)" min="1">
+                    <button class="action-btn casino-btn" onclick="startBlackjack()">Play Hand</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="bottom-nav">
+            <button class="nav-btn active" onclick="switchTab('life', this)"><span class="nav-icon">❤️</span><span>Life</span></button>
+            <button class="nav-btn" id="tab-family" onclick="switchTab('family', this)" disabled><span class="nav-icon">👨‍👩‍👧‍👦</span><span>Family</span></button>
+            <button class="nav-btn" id="tab-edu" onclick="switchTab('edu', this)" disabled><span class="nav-icon">🎓</span><span>Edu</span></button>
+            <button class="nav-btn" id="tab-job" onclick="switchTab('job', this)" disabled><span class="nav-icon">💼</span><span>Career</span></button>
+            <button class="nav-btn" id="tab-market" onclick="switchTab('market', this)" disabled><span class="nav-icon">📈</span><span>Market</span></button>
+            <button class="nav-btn" id="tab-bank" onclick="switchTab('bank', this)" disabled><span class="nav-icon">🏦</span><span>Bank</span></button>
+            <button class="nav-btn" id="tab-casino" onclick="switchTab('casino', this)" disabled><span class="nav-icon">🎰</span><span>Casino</span></button>
+        </div>
+
+        <div id="monthly-modal" class="modal-overlay">
+            <div class="modal-content">
+                <h2 style="margin-top:0; color: #6200ea;">Monthly Statement</h2>
+                <h4 style="margin-bottom: 5px; text-align: left;">Cashflow</h4>
+                <div class="statement-row"><span>FT Salary:</span> <span class="cash">+₹<span id="st-salary">0</span></span></div>
+                <div class="statement-row"><span>Gig Income:</span> <span class="cash">+₹<span id="st-gig">0</span></span></div>
+                <div class="statement-row"><span>Living Expenses:</span> <span class="debt">-₹<span id="st-expenses">0</span></span></div>
+                <div class="statement-row"><span>Debt Interest:</span> <span class="debt">-₹<span id="st-interest">0</span></span></div>
+                <div class="statement-row" style="border-bottom: 2px solid #fff; font-weight: bold; margin-top: 5px;">
+                    <span>Net Cashflow:</span> <span id="st-net">₹0</span>
+                </div>
+                <div class="news-box">
+                    <strong>📰 Breaking News (Applies Next Month):</strong>
+                    <p id="st-news" style="font-style: italic;">Loading...</p>
+                    <div style="margin-top: 15px; font-size: 0.85em; background: #1a1a1a; padding: 10px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333;">
+                        <span id="credibility-text">Credibility: <span style="color:#888;">??? (Hidden)</span></span>
+                        <button class="action-btn market-btn" id="unlock-cred-btn" style="padding: 5px 10px; font-size: 0.9em; width: auto; margin-top: 0;" onclick="unlockCredibility()">Unlock (Watch Ad)</button>
+                    </div>
+                </div>
+                <button class="action-btn" style="margin-top: 20px;" onclick="closeMonthlyStatement()">Acknowledge & Continue</button>
+            </div>
+        </div>
+
+        <div id="game-over-modal" class="modal-overlay">
+            <div class="modal-content game-over-content">
+                <h1 style="margin-top:0; color: #f44336;">GAME OVER</h1>
+                <p>You have gone completely bankrupt with a negative bank balance and no cash left to survive.</p>
+                <button class="action-btn danger-btn" style="margin-top: 20px;" onclick="location.reload()">Restart Life</button>
+            </div>
+        </div>
+
+        <div id="bj-modal" class="modal-overlay">
+            <div class="modal-content bj-modal-content">
+                <h2 style="margin-top:0; color: #ff9800;">VIP Blackjack</h2>
+                <p>Bet: <strong class="cash" id="bj-bet-display">₹0</strong></p>
+                <div style="text-align: left; margin-bottom: 15px;">
+                    <strong>Dealer's Hand:</strong> <span id="bj-dealer-score" class="info">?</span>
+                    <div id="bj-dealer-cards" class="card-display"></div>
+                </div>
+                <div style="text-align: left; margin-bottom: 15px;">
+                    <strong>Your Hand:</strong> <span id="bj-player-score" class="info">0</span>
+                    <div id="bj-player-cards" class="card-display"></div>
+                </div>
+                <p id="bj-message" style="font-weight: bold; height: 20px; font-size: 1.1em;"></p>
+                <div id="bj-controls" style="display: flex; gap: 10px;">
+                    <button class="action-btn" onclick="bjHit()">Hit</button>
+                    <button class="action-btn danger-btn" onclick="bjStand()">Stand</button>
+                </div>
+                <button class="action-btn" id="bj-close-btn" style="display: none; background: #555;" onclick="closeBlackjack()">Close Table</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    const mNames = ["Arjun", "Rohan", "Vikram", "Aarav", "Rahul", "Sam", "John", "David"];
+    const fNames = ["Priya", "Ananya", "Neha", "Sara", "Emily", "Jessica", "Sophia", "Maya"];
+
+    let player = {
+        firstName: "", lastName: "", gender: "", ageYears: 0, ageMonths: 0, wealth: "", 
+        cash: 0, bankBalance: 0, studentLoan: 0, happiness: 100,
+        parent1: "", parent2: "", sibling: "",
+        
+        partner: null, partnerGender: "", isSearchingPartner: false, partnerSearchMonths: 0, attractionPref: "",
+        relationshipStatus: "Single", relationshipScore: 0, monthsSinceInteraction: 0,
+        
+        education: "None", isStudying: false, degreeDuration: 0, monthsStudied: 0, hasDegree: false, pendingCost: 0,
+        skillLearning: null, skillMonths: 0, ownedSkills: [],
+        
+        jobType: "Unemployed", currentJob: "None", jobSalary: 0, 
+        ptHoursThisMonth: 0, extraHoursThisYear: 0, monthsInJob: 0, monthsSincePromo: 0,
+        freelanceHoursWorked: 0, gigIncomeThisMonth: 0,
+        
+        creditScore: 650, ccDebt: 0, ccLimit: 0, hasCreditCard: false, ccBlocked: false, missedPayments: 0, ccPaidThisMonth: false
+    };
+
+    let market = {
+        pendingNews: null, 
+        stocks: {
+            "Banking": [ { id: "FC", name: "FinCorp", type: "stock", price: 120.50, prev: 120.50, shares: 0, costBasis: 0, shortShares: 0, shortCost: 0 }, { id: "TB", name: "TrustBank", type: "stock", price: 195.10, prev: 195.10, shares: 0, costBasis: 0, shortShares: 0, shortCost: 0 } ],
+            "IT": [ { id: "TN", name: "TechNova", type: "stock", price: 250.00, prev: 250.00, shares: 0, costBasis: 0, shortShares: 0, shortCost: 0 }, { id: "CS", name: "CyberStream", type: "stock", price: 115.75, prev: 115.75, shares: 0, costBasis: 0, shortShares: 0, shortCost: 0 } ],
+            "Pharma": [ { id: "BH", name: "BioHeal", type: "stock", price: 180.20, prev: 180.20, shares: 0, costBasis: 0, shortShares: 0, shortCost: 0 }, { id: "GM", name: "GenMeds", type: "stock", price: 98.60, prev: 98.60, shares: 0, costBasis: 0, shortShares: 0, shortCost: 0 } ],
+            "Defence": [ { id: "AS", name: "AeroStrike", type: "stock", price: 210.00, prev: 210.00, shares: 0, costBasis: 0, shortShares: 0, shortCost: 0 }, { id: "IS", name: "IronShield", type: "stock", price: 165.40, prev: 165.40, shares: 0, costBasis: 0, shortShares: 0, shortCost: 0 } ]
+        },
+        indices: [
+            { id: "IDX_BNK", name: "Bank Index", type: "index", target: "Banking", price: 157.80, prev: 157.80, shares: 0, costBasis: 0, shortShares: 0, shortCost: 0 },
+            { id: "IDX_IT", name: "IT Index", type: "index", target: "IT", price: 182.88, prev: 182.88, shares: 0, costBasis: 0, shortShares: 0, shortCost: 0 },
+            { id: "IDX_PHR", name: "Pharma Index", type: "index", target: "Pharma", price: 139.40, prev: 139.40, shares: 0, costBasis: 0, shortShares: 0, shortCost: 0 },
+            { id: "IDX_DEF", name: "Defence Index", type: "index", target: "Defence", price: 187.70, prev: 187.70, shares: 0, costBasis: 0, shortShares: 0, shortCost: 0 }
+        ],
+        crypto: [
+            { id: "BTC", name: "Bitcoin", type: "crypto", price: 42500, prev: 42500, shares: 0, costBasis: 0, shortShares: 0, shortCost: 0 },
+            { id: "ETH", name: "Ethereum", type: "crypto", price: 2250, prev: 2250, shares: 0, costBasis: 0, shortShares: 0, shortCost: 0 },
+            { id: "SOL", name: "Solana", type: "crypto", price: 95, prev: 95, shares: 0, costBasis: 0, shortShares: 0, shortCost: 0 }
+        ]
+    };
+
+    let currentNewsDisplay = "";
+    let statementData = { salary: 0, gig: 0, expenses: 0, interest: 0, net: 0 };
+
+    function logMessage(msg) {
+        const logDiv = document.getElementById('log');
+        logDiv.innerHTML += `<div>> ${msg}</div>`;
+        logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function getRandomName(genderPref) {
+        let isMale = false;
+        if(genderPref === "Male") isMale = true;
+        else if (genderPref === "Female") isMale = false;
+        else isMale = Math.random() > 0.5;
+        
+        return {
+            name: isMale ? mNames[Math.floor(Math.random() * mNames.length)] : fNames[Math.floor(Math.random() * fNames.length)],
+            gender: isMale ? "Male" : "Female"
+        };
+    }
+
+    function initMarketUI() {
+        const select = document.getElementById('trade-asset-select');
+        select.innerHTML = '';
+        let addGroup = (label, items) => {
+            let optgroup = document.createElement('optgroup');
+            optgroup.label = label;
+            items.forEach(item => {
+                let opt = document.createElement('option');
+                opt.value = item.id; opt.text = `${item.name} (${item.id})`; optgroup.appendChild(opt);
+            });
+            select.appendChild(optgroup);
+        };
+        for (const [ind, stocks] of Object.entries(market.stocks)) addGroup(`${ind} Stocks`, stocks);
+        addGroup('Sector Indices', market.indices); addGroup('Cryptocurrency', market.crypto);
+    }
+
+    function getAllAssets() {
+        let assets = [];
+        for (const ind in market.stocks) assets.push(...market.stocks[ind]);
+        assets.push(...market.indices); assets.push(...market.crypto);
+        return assets;
+    }
+
+    function updateMarketUI() {
+        const allAssets = getAllAssets();
+        
+        const tickerDiv = document.getElementById('market-ticker-display');
+        tickerDiv.innerHTML = '';
+        allAssets.forEach(a => {
+            let trC = a.price >= a.prev ? 'trend-up' : 'trend-down';
+            let ic = a.price >= a.prev ? '▲' : '▼';
+            tickerDiv.innerHTML += `<div class="ticker-row"><span class="ticker-name">${a.name} <span style="color:#666; font-size:0.8em;">${a.id}</span></span><span class="ticker-price ${trC}">₹${a.price.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} ${ic}</span></div>`;
+        });
+
+        const portDiv = document.getElementById('portfolio-display');
+        portDiv.innerHTML = '';
+        let hasHoldings = false;
+        allAssets.forEach(a => {
+            if (a.shares > 0 || a.shortShares > 0) {
+                hasHoldings = true;
+                let html = `<div class="portfolio-item"><strong>${a.name} (${a.id})</strong>`;
+                
+                if(a.shares > 0) {
+                    let roiPct = ((a.price - a.costBasis) / a.costBasis) * 100;
+                    let roiAmt = (a.price - a.costBasis) * a.shares;
+                    let sign = roiAmt >= 0 ? '+' : '';
+                    let color = roiAmt >= 0 ? 'trend-up' : 'trend-down';
+                    
+                    html += `<div class="port-grid">
+                        <div>Long: <span class="cash">${a.shares}</span></div>
+                        <div>Avg Cost: ₹${a.costBasis.toLocaleString(undefined, {maximumFractionDigits:2})}</div>
+                        <div class="port-full-row">ROI: <strong class="${color}">${roiPct.toFixed(2)}% (${sign}₹${roiAmt.toLocaleString(undefined, {maximumFractionDigits:2})})</strong></div>
+                    </div>`;
+                }
+                
+                if(a.shortShares > 0) {
+                    let roiPct = ((a.shortCost - a.price) / a.shortCost) * 100;
+                    let roiAmt = (a.shortCost - a.price) * a.shortShares;
+                    let sign = roiAmt >= 0 ? '+' : '';
+                    let color = roiAmt >= 0 ? 'trend-up' : 'trend-down';
+                    let border = a.shares > 0 ? 'border-top:1px dashed #444; margin-top:5px; padding-top:5px;' : '';
+                    
+                    html += `<div class="port-grid" style="${border}">
+                        <div>Short: <span class="debt">${a.shortShares}</span></div>
+                        <div>Avg Cost: ₹${a.shortCost.toLocaleString(undefined, {maximumFractionDigits:2})}</div>
+                        <div class="port-full-row">ROI: <strong class="${color}">${roiPct.toFixed(2)}% (${sign}₹${roiAmt.toLocaleString(undefined, {maximumFractionDigits:2})})</strong></div>
+                    </div>`;
+                }
+                html += `</div>`;
+                portDiv.innerHTML += html;
+            }
+        });
+        if(!hasHoldings) portDiv.innerHTML = '<p class="progress-text">No active holdings.</p>';
+
+        updateTradeUI();
+    }
+
+    function updateTradeUI() {
+        const assetId = document.getElementById('trade-asset-select').value;
+        const asset = getAllAssets().find(a => a.id === assetId);
+        if (!asset) return;
+
+        document.getElementById('tr-price').innerText = asset.price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        let trend = document.getElementById('tr-trend');
+        trend.innerText = asset.price >= asset.prev ? '▲' : '▼';
+        trend.className = asset.price >= asset.prev ? 'trend-up' : 'trend-down';
+        document.getElementById('tr-owned').innerText = asset.shares;
+        document.getElementById('tr-short').innerText = asset.shortShares;
+
+        document.getElementById('short-controls').style.display = (asset.type === 'index' || asset.type === 'crypto') ? 'flex' : 'none';
+    }
+
+    function updateUI() {
+        document.getElementById('ui-age').innerText = player.ageYears >= 16 ? `${player.ageYears}Y, ${player.ageMonths}M` : `${player.ageYears} Yrs`;
+        document.getElementById('ui-bank').innerText = '₹' + Math.floor(player.bankBalance).toLocaleString();
+        document.getElementById('ui-cash-hand').innerText = '₹' + Math.floor(player.cash).toLocaleString();
+        document.getElementById('ui-debt').innerText = '₹' + Math.floor(player.studentLoan + player.ccDebt).toLocaleString();
+        document.getElementById('ui-cscore').innerText = player.ageYears >= 18 ? player.creditScore : "N/A";
+        document.getElementById('ui-happy').innerText = Math.floor(player.happiness) + "%";
+        
+        document.getElementById('ui-bank-bal').innerText = '₹' + Math.floor(player.bankBalance).toLocaleString();
+        if (player.hasCreditCard) {
+            document.getElementById('apply-cc-btn').style.display = "none";
+            document.getElementById('cc-actions').style.display = player.ccBlocked ? "none" : "block";
+            document.getElementById('ui-cc-status').innerText = player.ccBlocked ? "BLOCKED" : "Active";
+            document.getElementById('ui-cc-status').style.color = player.ccBlocked ? "#f44336" : "#4caf50";
+            document.getElementById('ui-cc-limit').innerText = '₹' + Math.floor(player.ccLimit).toLocaleString();
+            document.getElementById('ui-cc-debt').innerText = '₹' + Math.floor(player.ccDebt).toLocaleString();
+        }
+
+        document.getElementById('ui-parent1').innerText = player.parent1;
+        document.getElementById('ui-parent2').innerText = player.parent2;
+        document.getElementById('ui-sibling').innerText = player.sibling;
+        
+        if (player.ageYears >= 18) {
+            document.getElementById('partner-section').style.display = "block";
+            if (player.partner) {
+                document.getElementById('partner-search-box').style.display = "none";
+                document.getElementById('partner-active-box').style.display = "block";
+                document.getElementById('ui-partner-name').innerText = player.partner;
+                document.getElementById('ui-partner-status').innerText = player.relationshipStatus;
+                document.getElementById('ui-partner-rel-bar').value = player.relationshipScore;
+                
+                const gb = document.getElementById('gift-buttons');
+                gb.innerHTML = '';
+                if(player.partnerGender === "Female") {
+                    gb.innerHTML += `<button class="action-btn gift-btn" onclick="interactPartner('gift', 1000)">Buy Flowers (₹1,000)</button>`;
+                    gb.innerHTML += `<button class="action-btn gift-btn" onclick="interactPartner('gift', 15000)">Buy Designer Handbag (₹15,000)</button>`;
+                } else {
+                    gb.innerHTML += `<button class="action-btn gift-btn" onclick="interactPartner('gift', 4000)">Buy Game CD (₹4,000)</button>`;
+                    gb.innerHTML += `<button class="action-btn gift-btn" onclick="interactPartner('gift', 45000)">Buy Game Console (₹45,000)</button>`;
+                }
+
+                if (player.ageYears >= 21 && player.relationshipStatus === "Dating") {
+                    document.getElementById('propose-btn').style.display = "block";
+                    document.getElementById('propose-btn').disabled = (player.relationshipScore < 100 || player.bankBalance + player.cash < 100000);
+                } else {
+                    document.getElementById('propose-btn').style.display = "none";
+                }
+            } else {
+                document.getElementById('partner-search-box').style.display = "block";
+                document.getElementById('partner-active-box').style.display = "none";
+            }
+        }
+
+        if(player.isStudying) {
+            document.getElementById('edu-status').innerText = `Studying ${player.education}`;
+            document.getElementById('edu-progress').innerText = `Progress: M${player.monthsStudied} / ${player.degreeDuration}`;
+            document.getElementById('edu-options').style.display = "none"; 
+        } else if (player.hasDegree) {
+            document.getElementById('edu-status').innerText = `Graduated: ${player.education}`;
+            document.getElementById('edu-progress').innerText = "";
+            document.getElementById('edu-options').style.display = "none"; 
+        } else {
+            document.getElementById('edu-options').style.display = "block";
+        }
+
+        if(player.skillLearning) {
+            document.getElementById('skill-status-panel').style.display = "block";
+            document.getElementById('skill-options').style.display = "none";
+            document.getElementById('skill-status').innerText = player.skillLearning;
+            document.getElementById('skill-progress').innerText = `Progress: M${player.skillMonths} / 3`;
+        } else {
+            document.getElementById('skill-status-panel').style.display = "none";
+            document.getElementById('skill-options').style.display = "block";
+            const skillBtns = document.getElementById('skill-options').children;
+            for(let btn of skillBtns) {
+                let sName = btn.innerText.split(' -')[0].replace('Learn ','');
+                btn.style.display = player.ownedSkills.includes(sName) ? "none" : "block";
+            }
+        }
+
+        let maxPtHours = player.isStudying ? 80 : 160;
+        document.getElementById('ui-pt-max').innerText = maxPtHours;
+        document.getElementById('ui-pt-hours').innerText = player.ptHoursThisMonth;
+        document.getElementById('ui-fl-hours').innerText = player.freelanceHoursWorked;
+        
+        document.getElementById('freelance-btn').disabled = player.ownedSkills.length === 0;
+
+        if (player.jobType === "Full-Time") {
+            document.getElementById('active-job-panel').style.display = "block";
+            document.getElementById('ui-active-role').innerText = player.currentJob;
+            document.getElementById('ui-active-pay').innerText = '₹' + Math.floor(player.jobSalary).toLocaleString();
+            document.getElementById('ui-job-months').innerText = player.monthsInJob;
+            document.getElementById('ui-extra-hrs-yr').innerText = player.extraHoursThisYear;
+            
+            document.querySelectorAll('.ft-apply-btn').forEach(b => b.style.display = 'none');
+            document.getElementById('ft-freelance-btn').style.display = 'none';
+        } else {
+            document.querySelectorAll('.ft-apply-btn').forEach(b => b.style.display = 'block');
+            if (player.freelanceHoursWorked >= 400) {
+                document.getElementById('ft-freelance-btn').style.display = 'block';
+            }
+        }
+
+        updateMarketUI();
+
+        if (player.ageYears >= 16) {
+            document.querySelectorAll('.nav-btn').forEach(b => b.disabled = false);
+            document.getElementById('age-btn').innerText = "Next Month ➔";
+            document.getElementById('time-desc').innerText = "Advance time to run payroll and markets.";
+        }
+    }
+
+    function switchTab(tabId, btnElement) {
+        if(btnElement.disabled) return;
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        btnElement.classList.add('active');
+    }
+
+    function startGame() {
+        const fn = document.getElementById('firstName').value;
+        const ln = document.getElementById('lastName').value;
+        const gen = document.getElementById('playerGender').value;
+        if (!fn || !ln || !gen) { alert("Please fill all details."); return; }
+        
+        player.firstName = fn; player.lastName = ln; player.gender = gen;
+        player.wealth = Math.random() > 0.5 ? "Rich" : "Poor";
+        let p1 = getRandomName("Male"); let p2 = getRandomName("Female"); let sib = getRandomName("Any");
+        player.parent1 = `${p1.name} ${ln}`;
+        player.parent2 = `${p2.name} ${ln}`;
+        player.sibling = `${sib.name} ${ln}`;
+
+        document.getElementById('intro-screen').style.display = 'none';
+        document.getElementById('game-screen').style.display = 'flex';
+        logMessage(`Born into a ${player.wealth} family. Name: ${fn} ${ln}.`);
+        
+        initMarketUI();
+        generateNextMonthNews(); 
+        updateUI();
+    }
+
+    function startPartnerSearch() {
+        player.attractionPref = document.getElementById('attractionPreference').value;
+        player.isSearchingPartner = true; player.partnerSearchMonths = 0;
+        document.getElementById('start-search-btn').style.display = "none";
+        document.getElementById('search-progress-text').style.display = "block";
+        logMessage(`Started looking for a partner.`);
+    }
+
+    function interactPartner(action, cost = 0) {
+        if(action === 'time') {
+            if(player.ptHoursThisMonth + 4 > (player.isStudying?80:160)) { logMessage("Not enough free hours this month."); return; }
+            player.ptHoursThisMonth += 4;
+            player.relationshipScore = Math.min(100, player.relationshipScore + 10);
+            logMessage(`Spent quality time with ${player.partner}. (+10 Rel)`);
+        } else if (action === 'gift') {
+            if((player.bankBalance + player.cash) < cost) { logMessage("Cannot afford this gift."); return; }
+            if(player.cash >= cost) player.cash -= cost; 
+            else { player.bankBalance -= (cost - player.cash); player.cash = 0; }
+            player.relationshipScore = Math.min(100, player.relationshipScore + 20);
+            logMessage(`Bought a gift for ${player.partner}! (+20 Rel)`);
+        }
+        player.monthsSinceInteraction = 0;
+        updateUI();
+    }
+
+    function proposePartner() {
+        if((player.bankBalance + player.cash) < 100000) return;
+        if(player.cash >= 100000) player.cash -= 100000; 
+        else { player.bankBalance -= (100000 - player.cash); player.cash = 0; }
+        player.relationshipStatus = "Engaged";
+        applyHappiness(30);
+        logMessage(`<span class="info">💍 You proposed to ${player.partner} and they said YES!</span>`);
+        updateUI();
+    }
+
+    function learnSkill(skillName) {
+        if ((player.bankBalance + player.cash) < 10000) return;
+        if (player.cash >= 10000) player.cash -= 10000; 
+        else { player.bankBalance -= (10000 - player.cash); player.cash = 0; }
+        player.skillLearning = skillName;
+        player.skillMonths = 0;
+        logMessage(`Started learning ${skillName}.`);
+        updateUI();
+    }
+
+    function generateNextMonthNews() {
+        const industries = ["Banking", "IT", "Pharma", "Defence"];
+        const target = industries[Math.floor(Math.random() * industries.length)];
+        const isPositive = Math.random() > 0.5;
+        
+        const isTrueNews = Math.random() > 0.30; 
+        const credScore = isTrueNews ? Math.floor(Math.random() * 33 + 65) : Math.floor(Math.random() * 33 + 12);
+        
+        market.pendingNews = {
+            targetIndustry: target,
+            text: isPositive ? `Major breakthrough boosts ${target} sector!` : `Regulatory hurdles hit ${target} sector hard.`,
+            minEffect: isPositive ? 0.08 : -0.12,
+            maxEffect: isPositive ? 0.18 : -0.05,
+            isTrue: isTrueNews,
+            credibility: credScore,
+            revealed: false
+        };
+        currentNewsDisplay = market.pendingNews.text;
+    }
+
+    function processMarkets() {
+        let news = market.pendingNews;
+        for (const [ind, stocks] of Object.entries(market.stocks)) {
+            stocks.forEach(s => {
+                s.prev = s.price;
+                let modifier = (Math.random() * 0.06) - 0.03; 
+                
+                if (news && news.targetIndustry === ind) {
+                    let newsEffect = (Math.random() * (news.maxEffect - news.minEffect)) + news.minEffect;
+                    if (!news.isTrue) {
+                        newsEffect = -(newsEffect * 0.8); 
+                    }
+                    modifier += newsEffect;
+                }
+                
+                s.price = Math.max(1, parseFloat((s.price * (1 + modifier)).toFixed(2)));
+            });
+        }
+        market.indices.forEach(idx => {
+            idx.prev = idx.price;
+            let sectorStocks = market.stocks[idx.target];
+            let sum = sectorStocks.reduce((total, stock) => total + stock.price, 0);
+            idx.price = parseFloat((sum / sectorStocks.length).toFixed(2));
+        });
+        market.crypto.forEach(c => {
+            c.prev = c.price;
+            let cryptoMod = (Math.random() * 0.16) - 0.08; 
+            c.price = Math.max(1, parseFloat((c.price * (1 + cryptoMod)).toFixed(2)));
+        });
+        generateNextMonthNews();
+    }
+
+    function advanceTime() {
+        if (player.ageYears < 16) {
+            player.ageYears++;
+            if (player.ageYears === 16) logMessage(`<span class="info">Age 16! Time moves monthly.</span>`);
+            else logMessage(`Age ${player.ageYears}: Grew a bit older.`);
+            updateUI();
+            return;
+        }
+
+        player.ageMonths++;
+        if (player.ageMonths >= 12) { player.ageYears++; player.ageMonths = 0; player.extraHoursThisYear = 0; }
+        
+        player.ptHoursThisMonth = 0;
+        statementData = { salary: 0, gig: 0, expenses: 0, interest: 0, net: 0 };
+        statementData.gig = player.gigIncomeThisMonth;
+        player.gigIncomeThisMonth = 0; 
+
+        if (player.isSearchingPartner) {
+            player.partnerSearchMonths++;
+            if (player.partnerSearchMonths >= 3 || Math.random() < 0.33) {
+                player.isSearchingPartner = false;
+                let newP = getRandomName(player.attractionPref);
+                player.partner = newP.name;
+                player.partnerGender = newP.gender;
+                player.relationshipScore = 50;
+                player.monthsSinceInteraction = 0;
+                logMessage(`<span class="info">❤️ Dating ${player.partner}.</span>`);
+            }
+        } else if (player.partner) {
+            player.monthsSinceInteraction++;
+            if(player.monthsSinceInteraction >= 3) {
+                logMessage(`<span class="debt">💔 ${player.partner} broke up with you due to neglect.</span>`);
+                player.partner = null; player.relationshipStatus = "Single"; player.relationshipScore = 0;
+                applyHappiness(-30);
+            }
+        }
+
+        if (player.isStudying) {
+            player.monthsStudied++;
+            if (player.monthsStudied >= player.degreeDuration) {
+                player.isStudying = false; player.hasDegree = true;
+                logMessage(`<span class="info">🎓 GRADUATED: ${player.education}!</span>`);
+            }
+        }
+        if (player.skillLearning) {
+            player.skillMonths++;
+            if (player.skillMonths >= 3) {
+                player.ownedSkills.push(player.skillLearning);
+                logMessage(`<span class="info">📚 Mastered ${player.skillLearning}!</span>`);
+                player.skillLearning = null;
+            }
+        }
+
+        if (player.jobType === "Full-Time") {
+            statementData.salary += player.jobSalary;
+            player.bankBalance += player.jobSalary;
+            player.monthsInJob++; player.monthsSincePromo++;
+
+            if (player.monthsInJob > 0 && player.monthsInJob % 12 === 0) {
+                let bonusHrs = Math.min(200, player.extraHoursThisYear); 
+                let raisePercent = 0.06 + (0.06 * (bonusHrs / 200)); 
+                player.jobSalary += player.jobSalary * raisePercent;
+                logMessage(`<span class="info">Yearly Review: ${(raisePercent*100).toFixed(1)}% raise!</span>`);
+            }
+
+            let promoFactor = Math.min(200, player.extraHoursThisYear) / 200;
+            if (player.monthsSincePromo >= 36 || (player.monthsSincePromo >= 12 && Math.random() < (0.05 + 0.10*promoFactor))) {
+                player.jobSalary += player.jobSalary * (0.50 + 0.25*promoFactor);
+                player.currentJob = "Senior " + player.currentJob;
+                player.monthsSincePromo = 0;
+                logMessage(`<span class="info">PROMOTED to ${player.currentJob}!</span>`);
+            }
+        }
+
+        let livingExp = player.ageYears >= 18 ? 5000 : 0;
+        statementData.expenses += livingExp;
+        
+        if (player.studentLoan > 0) {
+            let int = player.studentLoan * 0.0041;
+            player.studentLoan += int; statementData.interest += int;
+        }
+
+        if (player.hasCreditCard) {
+            if (player.ccDebt > 0) {
+                let ccInt = player.ccDebt * 0.03;
+                player.ccDebt += ccInt; statementData.interest += ccInt;
+                if (!player.ccPaidThisMonth) {
+                    player.missedPayments++;
+                    player.creditScore = Math.max(300, player.creditScore - 25);
+                    if (player.missedPayments >= 3 && !player.ccBlocked) player.ccBlocked = true;
+                } else {
+                    player.missedPayments = 0;
+                    player.creditScore = Math.min(850, player.creditScore + 5);
+                }
+            }
+            player.ccPaidThisMonth = false;
+            if(!player.ccBlocked && player.jobType === "Full-Time") {
+                let mult = Math.min(3, Math.max(1, 1 + ((player.creditScore - 300) / 275)));
+                player.ccLimit = player.jobSalary * mult;
+            }
+        }
+
+        let totalDed = statementData.expenses;
+        player.bankBalance -= totalDed;
+
+        if (player.bankBalance < 0 && player.cash <= 0) {
+            document.getElementById('game-over-modal').style.display = "flex";
+            return;
+        }
+
+        statementData.net = (statementData.salary + statementData.gig) - statementData.expenses - statementData.interest;
+        processMarkets(); 
+        showMonthlyStatement();
+    }
+
+    function unlockCredibility() {
+        if(!market.pendingNews) return;
+        market.pendingNews.revealed = true;
+        let color = market.pendingNews.credibility > 50 ? '#4caf50' : '#f44336';
+        document.getElementById('credibility-text').innerHTML = `Credibility Rating: <strong style="color:${color};">${market.pendingNews.credibility}%</strong>`;
+        document.getElementById('unlock-cred-btn').style.display = 'none';
+    }
+
+    function showMonthlyStatement() {
+        document.getElementById('st-salary').innerText = Math.floor(statementData.salary).toLocaleString();
+        document.getElementById('st-gig').innerText = Math.floor(statementData.gig).toLocaleString();
+        document.getElementById('st-expenses').innerText = Math.floor(statementData.expenses).toLocaleString();
+        document.getElementById('st-interest').innerText = Math.floor(statementData.interest).toLocaleString();
+        let netEl = document.getElementById('st-net');
+        netEl.innerText = (statementData.net >= 0 ? '+₹' : '-₹') + Math.abs(Math.floor(statementData.net)).toLocaleString();
+        netEl.style.color = statementData.net >= 0 ? '#4caf50' : '#f44336';
+        
+        document.getElementById('st-news').innerText = currentNewsDisplay;
+
+        let credBtn = document.getElementById('unlock-cred-btn');
+        let credText = document.getElementById('credibility-text');
+        if(market.pendingNews && market.pendingNews.revealed) {
+            let color = market.pendingNews.credibility > 50 ? '#4caf50' : '#f44336';
+            credText.innerHTML = `Credibility Rating: <strong style="color:${color};">${market.pendingNews.credibility}%</strong>`;
+            credBtn.style.display = 'none';
+        } else {
+            credText.innerHTML = `Credibility Rating: <span style="color:#888;">??? (Hidden)</span>`;
+            credBtn.style.display = 'inline-block';
+        }
+
+        document.getElementById('monthly-modal').style.display = "flex";
+    }
+
+    function closeMonthlyStatement() {
+        document.getElementById('monthly-modal').style.display = "none";
+        updateUI();
+    }
+
+    function executeTrade(action) {
+        let assetId = document.getElementById('trade-asset-select').value;
+        let amt = parseInt(document.getElementById('tr-amt').value);
+        if (isNaN(amt) || amt <= 0) return;
+
+        let asset = getAllAssets().find(a => a.id === assetId);
+        if (!asset) return;
+
+        let cost = amt * asset.price;
+        
+        if (action === 'buy' && player.bankBalance >= cost) {
+            player.bankBalance -= cost;
+            let totalCost = (asset.shares * asset.costBasis) + cost;
+            asset.shares += amt; asset.costBasis = totalCost / asset.shares;
+        } 
+        else if (action === 'sell' && asset.shares >= amt) {
+            let val = amt * asset.price; let profit = val - (amt * asset.costBasis);
+            player.bankBalance += val; asset.shares -= amt;
+            if(asset.shares === 0) asset.costBasis = 0;
+            applyHappiness(profit > 0 ? 5 : -5);
+        }
+        else if (action === 'short' && player.bankBalance >= cost) {
+            player.bankBalance -= cost;
+            let totalCost = (asset.shortShares * asset.shortCost) + cost;
+            asset.shortShares += amt; asset.shortCost = totalCost / asset.shortShares;
+        }
+        else if (action === 'cover' && asset.shortShares >= amt) {
+            let profit = (asset.shortCost - asset.price) * amt;
+            player.bankBalance += (amt * asset.shortCost) + profit;
+            asset.shortShares -= amt;
+            if(asset.shortShares === 0) asset.shortCost = 0;
+            applyHappiness(profit > 0 ? 5 : -5);
+        }
+
+        document.getElementById('tr-amt').value = ''; 
+        updateUI();
+    }
+
+    function applyHappiness(amount) {
+        player.happiness = Math.max(0, Math.min(100, player.happiness + amount));
+    }
+
+    function enroll(d, dur, c) { document.getElementById('funding-options').style.display='block'; player.pendingCost = c; player.education = d; player.degreeDuration = dur; }
+    function payForCollege(m) { player.isStudying = true; if(m==='loan') player.studentLoan += player.pendingCost; document.getElementById('funding-options').style.display='none'; updateUI(); }
+    
+    function workGig(j, rate, hrs) { 
+        if(player.ptHoursThisMonth + hrs > (player.isStudying?80:160)) { logMessage("Not enough hours left."); return; }
+        player.ptHoursThisMonth += hrs; 
+        let earned = hrs * rate;
+        player.cash += earned; 
+        player.gigIncomeThisMonth += earned;
+        if(j === 'Freelance') player.freelanceHoursWorked += hrs;
+        updateUI(); 
+    }
+    
+    function applyForJob(j, r, s) { 
+        if(r === "Skill" && player.freelanceHoursWorked < 400) return;
+        if(r !== "Skill" && (!player.hasDegree || player.education !== r)) return; 
+        player.jobType = "Full-Time"; player.currentJob = j; player.jobSalary = s; player.monthsInJob=0; updateUI(); 
+    }
+    
+    function workExtraHour() { player.extraHoursThisYear++; updateUI(); }
+
+    function bankTransaction(type) {
+        let amt = parseInt(document.getElementById('bank-amount').value); if(isNaN(amt)||amt<=0) return;
+        if (type==='deposit' && player.cash>=amt) { player.cash-=amt; player.bankBalance+=amt; }
+        else if (type==='withdraw' && player.bankBalance>=amt) { player.bankBalance-=amt; player.cash+=amt; }
+        document.getElementById('bank-amount').value=''; updateUI();
+    }
+    function applyForCreditCard() { if(player.ageYears>=18 && player.jobType==="Full-Time") { player.hasCreditCard = true; player.ccLimit = player.jobSalary; updateUI(); } }
+    function cashAdvance() {
+        if(player.ccBlocked) return; let chg = 5000 * 1.02;
+        if(player.ccDebt + chg <= player.ccLimit) { player.cash += 5000; player.ccDebt += chg; updateUI(); }
+    }
+    function payCreditCard() {
+        let amt = parseInt(document.getElementById('cc-pay-amount').value); if(isNaN(amt)||amt<=0) return;
+        amt = Math.min(amt, player.ccDebt);
+        if(player.bankBalance >= amt) { player.bankBalance-=amt; player.ccDebt-=amt; player.ccPaidThisMonth=true; if(player.ccDebt<=0) {player.ccBlocked=false; player.missedPayments=0;} updateUI(); }
+        document.getElementById('cc-pay-amount').value='';
+    }
+
+    function playSlots() {
+        let bet = parseInt(document.getElementById('slot-bet').value); 
+        if(isNaN(bet)||bet<=0||(player.cash + player.bankBalance)<bet) return;
+        
+        if (player.cash >= bet) player.cash -= bet;
+        else { player.bankBalance -= (bet - player.cash); player.cash = 0; }
+        
+        let r = Math.random();
+        if(r<0.02) player.cash += bet*20; 
+        else if(r<0.12) player.cash += bet*5;
+        else applyHappiness(-5); 
+        updateUI();
+    }
+    function playRoulette(c) {
+        let bet = parseInt(document.getElementById('roulette-bet').value); 
+        if(isNaN(bet)||bet<=0||(player.cash + player.bankBalance)<bet) return;
+        
+        if (player.cash >= bet) player.cash -= bet;
+        else { player.bankBalance -= (bet - player.cash); player.cash = 0; }
+        
+        if(Math.random()<0.473) player.cash += bet*2;
+        else applyHappiness(-5); 
+        updateUI();
+    }
+
+    let bjBet = 0, pHand = [], dHand = [], deck = [];
+    function buildDeck() {
+        deck = []; const suits = ['♠', '♥', '♦', '♣'], vals = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+        for(let s of suits) for(let v of vals) deck.push({suit:s, value:v});
+        deck.sort(() => Math.random() - 0.5);
+    }
+    function calcScore(h) {
+        let s=0, a=0; for(let c of h) { s += ['J','Q','K'].includes(c.value)?10:(c.value==='A'?11:parseInt(c.value)); if(c.value==='A') a++; }
+        while(s>21 && a>0) { s-=10; a--; } return s;
+    }
+    function rCard(c, hid=false) { return hid ? `<span class="hidden-card">🂠</span>` : `<span class="${(c.suit==='♥'||c.suit==='♦')?'red-card':'black-card'}">${c.value}${c.suit}</span>`; }
+    function rHands(hd=true) {
+        document.getElementById('bj-player-cards').innerHTML = pHand.map(c=>rCard(c)).join(''); document.getElementById('bj-player-score').innerText = calcScore(pHand);
+        document.getElementById('bj-dealer-cards').innerHTML = hd ? rCard(dHand[0])+rCard(dHand[1],true) : dHand.map(c=>rCard(c)).join('');
+        document.getElementById('bj-dealer-score').innerText = hd ? "?" : calcScore(dHand);
+    }
+    function startBlackjack() {
+        let bet = parseInt(document.getElementById('bj-bet-input').value); 
+        if(isNaN(bet)||bet<=0||(player.cash + player.bankBalance)<bet) return;
+        
+        if (player.cash >= bet) player.cash -= bet;
+        else { player.bankBalance -= (bet - player.cash); player.cash = 0; }
+        
+        bjBet = bet; buildDeck(); pHand = [deck.pop(), deck.pop()]; dHand = [deck.pop(), deck.pop()];
+        document.getElementById('bj-bet-display').innerText = `₹${bet.toLocaleString()}`; document.getElementById('bj-message').innerText = "";
+        document.getElementById('bj-controls').style.display = "flex"; document.getElementById('bj-close-btn').style.display = "none";
+        document.getElementById('bj-modal').style.display = "flex"; rHands(true); updateUI();
+        if(calcScore(pHand) === 21) endBlackjack(true);
+    }
+    function bjHit() { pHand.push(deck.pop()); rHands(true); if(calcScore(pHand)>21) { document.getElementById('bj-message').innerText="Bust!"; applyHappiness(-5); finishGame(); } }
+    function bjStand() { rHands(false); while(calcScore(dHand)<17) dHand.push(deck.pop()); endBlackjack(false); }
+    function endBlackjack(pbj) {
+        rHands(false); let ps=calcScore(pHand), ds=calcScore(dHand), m=document.getElementById('bj-message');
+        if(pbj && ds!==21) { player.cash += bjBet*2.5; m.innerText="BLACKJACK!"; }
+        else if(ds>21 || ps>ds) { player.cash += bjBet*2; m.innerText="You win!"; }
+        else if(ps===ds) { player.cash += bjBet; m.innerText="Push."; }
+        else { m.innerText="Dealer wins."; applyHappiness(-5); }
+        updateUI(); finishGame();
+    }
+    function finishGame() { document.getElementById('bj-controls').style.display="none"; document.getElementById('bj-close-btn').style.display="block"; }
+    function closeBlackjack() { document.getElementById('bj-modal').style.display="none"; }
+</script>
+</body>
+</html>
